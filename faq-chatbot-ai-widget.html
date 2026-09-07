@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI FAQ Chat Widget</title>
+<style>
+  :root {
+    --accent: #6b3fa0;
+    --accent-dark: #4e2c78;
+    --bg: #ffffff;
+    --bg-user: #6b3fa0;
+    --bg-bot: #f1eef7;
+    --text: #222;
+    --border: #ddd;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f5f7;
+  }
+
+  #faq-launcher {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-size: 26px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    z-index: 9999;
+  }
+  #faq-launcher:hover { background: var(--accent-dark); }
+
+  #faq-widget {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 340px;
+    max-width: calc(100vw - 40px);
+    height: 460px;
+    max-height: calc(100vh - 140px);
+    background: var(--bg);
+    border-radius: 14px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 9999;
+    border: 1px solid var(--border);
+  }
+  #faq-widget.open { display: flex; }
+
+  #faq-header {
+    background: var(--accent);
+    color: white;
+    padding: 14px 16px;
+    font-weight: 600;
+    font-size: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #faq-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  #faq-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .faq-msg {
+    max-width: 85%;
+    padding: 9px 13px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+  }
+  .faq-msg.bot {
+    background: var(--bg-bot);
+    color: var(--text);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .faq-msg.user {
+    background: var(--bg-user);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .faq-msg.error {
+    background: #fdecea;
+    color: #611a15;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .faq-typing {
+    align-self: flex-start;
+    display: flex;
+    gap: 4px;
+    padding: 10px 13px;
+    background: var(--bg-bot);
+    border-radius: 14px;
+    border-bottom-left-radius: 4px;
+  }
+  .faq-typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #999;
+    animation: faq-bounce 1s infinite ease-in-out;
+  }
+  .faq-typing span:nth-child(2) { animation-delay: 0.15s; }
+  .faq-typing span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes faq-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  #faq-input-row {
+    display: flex;
+    border-top: 1px solid var(--border);
+    padding: 10px;
+    gap: 8px;
+  }
+  #faq-input {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 9px 14px;
+    font-size: 14px;
+    outline: none;
+  }
+  #faq-input:focus { border-color: var(--accent); }
+  #faq-input:disabled { background: #f5f5f5; }
+  #faq-send {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 0 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  #faq-send:hover { background: var(--accent-dark); }
+  #faq-send:disabled { background: #bbb; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     Point this at your deployed Cloudflare Worker URL.
+     See faq-worker.js for backend setup instructions.
+     ============================================================ -->
+<script>
+  const WORKER_URL = "https://event-services-chat-bot.burn617.workers.dev";
+</script>
+
+<h2 style="text-align:center; color:#444;">Preview: click the chat bubble in the corner ↘</h2>
+<p style="text-align:center; color:#888; max-width:480px; margin:0 auto;">
+  This page is a demo host. Set WORKER_URL above to your deployed worker,
+  then copy everything from the launcher button down into any page to embed it for real.
+</p>
+
+<!-- ============ WIDGET MARKUP ============ -->
+<button id="faq-launcher" aria-label="Open chat">💬</button>
+
+<div id="faq-widget">
+  <div id="faq-header">
+    <span>Ask us anything</span>
+    <button id="faq-close" aria-label="Close chat">×</button>
+  </div>
+  <div id="faq-messages"></div>
+  <div id="faq-input-row">
+    <input id="faq-input" type="text" placeholder="Type a question..." />
+    <button id="faq-send">Send</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const launcher = document.getElementById('faq-launcher');
+  const widget = document.getElementById('faq-widget');
+  const closeBtn = document.getElementById('faq-close');
+  const messages = document.getElementById('faq-messages');
+  const input = document.getElementById('faq-input');
+  const sendBtn = document.getElementById('faq-send');
+
+  // Keep a running history so follow-up questions have context.
+  // Capped to last 10 turns to keep requests small.
+  let history = [];
+
+  function addMessage(text, sender) {
+    const div = document.createElement('div');
+    div.className = 'faq-msg ' + sender;
+    div.textContent = text;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+    return div;
+  }
+
+  function showTyping() {
+    const div = document.createElement('div');
+    div.className = 'faq-typing';
+    div.id = 'faq-typing-indicator';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function hideTyping() {
+    const el = document.getElementById('faq-typing-indicator');
+    if (el) el.remove();
+  }
+
+  function setBusy(busy) {
+    input.disabled = busy;
+    sendBtn.disabled = busy;
+  }
+
+  async function handleUserInput(text) {
+    text = text.trim();
+    if (!text) return;
+
+    addMessage(text, 'user');
+    input.value = '';
+    setBusy(true);
+    showTyping();
+
+    try {
+      const res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history }),
+      });
+
+      const data = await res.json();
+      hideTyping();
+
+      if (!res.ok || data.error) {
+        addMessage("Something went wrong reaching the assistant. Please try again shortly.", 'error');
+      } else {
+        addMessage(data.reply, 'bot');
+        history.push({ role: 'user', content: text });
+        history.push({ role: 'assistant', content: data.reply });
+        if (history.length > 20) history = history.slice(-20); // keep last ~10 turns
+      }
+    } catch (err) {
+      hideTyping();
+      addMessage("Couldn't connect. Check your internet connection and try again.", 'error');
+    } finally {
+      setBusy(false);
+      input.focus();
+    }
+  }
+
+  launcher.addEventListener('click', () => {
+    widget.classList.add('open');
+    if (messages.children.length === 0) {
+      addMessage("Hi! Ask me anything about our events services.", 'bot');
+    }
+    input.focus();
+  });
+  closeBtn.addEventListener('click', () => widget.classList.remove('open'));
+  sendBtn.addEventListener('click', () => handleUserInput(input.value));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleUserInput(input.value);
+  });
+})();
+</script>
+
+</body>
+</html>
