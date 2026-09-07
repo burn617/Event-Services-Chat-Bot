@@ -9,7 +9,7 @@ server-side and answers questions grounded in the knowledge base in
 Replace `YOUR-USERNAME/YOUR-REPO` below with wherever you push this
 folder, then click the button:
 
-[![Deploy to Cloudflare](https://red-violet-71af.burn617.workers.dev/)](https://deploy.workers.cloudflare.com/?url=https://github.com/burn617/Event-Services-Chat-Bot)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/YOUR-USERNAME/YOUR-REPO)
 
 During setup, Cloudflare will ask you to paste in your
 `ANTHROPIC_API_KEY` (get one at
