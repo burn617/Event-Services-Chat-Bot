@@ -1,0 +1,11 @@
+{
+  "name": "faq-chatbot-worker",
+  "private": true,
+  "cloudflare": {
+    "bindings": {
+      "ANTHROPIC_API_KEY": {
+        "description": "Your Anthropic API key from [console.anthropic.com](https://console.anthropic.com/settings/keys)."
+      }
+    }
+  }
+}
